@@ -4,25 +4,30 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.studentmanangement.models.User
+import com.example.studentmanangement.reppositories.UserRepository
 import com.example.studentmanangement.room.UserDao
 import com.example.studentmanangement.states.UserState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class UserViewModel(
-    private val dao: UserDao
+    private val repository: UserRepository,
+    val userDao: UserDao
 ):ViewModel() {
     var dataUser by mutableStateOf(UserState())
         private set
+
     init {
         viewModelScope.launch {
-            dao.getAllUser().collectLatest {
+            userDao.getAllUser().collectLatest {
                 dataUser = dataUser.copy(
                     listUsers = it
                 )
@@ -30,25 +35,26 @@ class UserViewModel(
         }
     }
     fun insertUser(user: User) = viewModelScope.launch {
-        dao.insertUser(user)
+        repository.insertUser(user)
     }
     fun deleteUser(user: User) = viewModelScope.launch {
-        dao.deleteUser(user)
+        repository.deleteUser(user)
     }
     fun updateUser(user: User) = viewModelScope.launch {
-        dao.updateUser(user)
+        repository.updateUser(user)
 
     }
     fun getUserById(id:Int) = viewModelScope.launch {
-        dao.getUserById(id)
+        repository.getUserById(id)
     }
-    val Context.dataStore by preferencesDataStore("settings")
-
-    fun authUser(username:String,password:String,context: Context) = viewModelScope.launch {
+    val Context.dataStore: DataStore<Preferences> by preferencesDataStore("current-user")
+    val GMAIL = stringPreferencesKey("gmail")
+    val PASSWORD = stringPreferencesKey("password")
+    fun auth(gmail:String,password:String,context: Context) = viewModelScope.launch {
         context.dataStore.edit {
-            it[stringPreferencesKey("gmail")] = username
-            it[stringPreferencesKey("password")] = password
+            it[GMAIL] = gmail
+            it[PASSWORD] = password
         }
-        dao.authUser(username, password)
+        repository.auth(gmail, password)
     }
 }
